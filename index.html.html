@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SENSITIVE VST · ARMONÍA COMPLETA</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        :root { --primary: #00ffff; --secondary: #ff00ff; --bg: #0b0f1c; --panel: #12182b; }
+        body { background: var(--bg); font-family: 'Share Tech Mono', monospace; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .vst-frame { max-width: 1200px; width: 100%; background: var(--panel); border: 3px solid var(--primary); border-radius: 40px 40px 20px 20px; padding: 30px 25px 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.8), inset 0 0 40px rgba(0,255,255,0.1); position: relative; }
+        .vst-frame::before { content: ""; position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border: 1px dashed rgba(0,255,255,0.3); border-radius: 30px; pointer-events: none; }
+        .brand { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 3.5rem; letter-spacing: 10px; text-align: center; color: transparent; text-shadow: 0 0 10px var(--primary), 2px 2px 0 var(--secondary); -webkit-text-stroke: 1px var(--primary); margin-bottom: 10px; }
+        .sub-brand { text-align: center; color: var(--primary); font-size: 0.9rem; letter-spacing: 3px; border-bottom: 1px solid var(--primary); padding-bottom: 15px; margin-bottom: 25px; text-transform: uppercase; }
+        .display-panel { background: #0a0e1a; border: 3px solid var(--primary); border-radius: 20px; padding: 20px; margin-bottom: 35px; box-shadow: inset 0 0 20px #000, 0 0 30px rgba(0,255,255,0.2); }
+        .chord-name { font-family: 'Orbitron', sans-serif; font-size: 4rem; font-weight: 700; text-align: center; color: var(--secondary); text-shadow: 0 0 20px var(--secondary), 0 0 40px #ff00ff; min-height: 1.5em; line-height: 1.2; word-break: break-word; }
+        .chord-detail { text-align: center; color: #88ffff; font-size: 1.2rem; letter-spacing: 2px; background: rgba(0,255,255,0.1); padding: 5px; border-radius: 30px; margin-top: 10px; }
+        .piano-container { background: #101624; border-radius: 30px; padding: 30px 10px 20px; border: 2px solid var(--primary); box-shadow: inset 0 0 30px #000, 0 0 40px rgba(0,255,255,0.3); margin: 20px 0; }
+        .piano-visual { display: flex; justify-content: center; position: relative; height: 200px; margin: 0 auto; }
+        .key { border: 2px solid #000; border-radius: 0 0 8px 8px; transition: all 0.07s ease; cursor: pointer; position: relative; box-shadow: 0 5px 0 #000, inset 0 -2px 5px rgba(255,255,255,0.2); will-change: transform, box-shadow; }
+        .key.white { background: linear-gradient(145deg, #fafafa, #d0d0d0); height: 200px; width: 50px; z-index: 1; filter: drop-shadow(0 0 4px cyan); }
+        .key.black { background: linear-gradient(145deg, #2b2b4f, #12122a); height: 120px; width: 32px; margin-left: -16px; margin-right: -16px; z-index: 2; border-radius: 0 0 6px 6px; filter: drop-shadow(0 0 6px magenta); }
+        .key.active { transform: translateY(5px); box-shadow: 0 2px 0 #000, inset 0 -2px 5px rgba(255,255,255,0.5); background: #ffffff !important; filter: brightness(1.5) drop-shadow(0 0 15px cyan); border-color: white; }
+        .key.black.active { transform: translateY(4px); box-shadow: 0 2px 0 #000, inset 0 -2px 5px rgba(255,255,255,0.3); background: #a0a0ff !important; filter: drop-shadow(0 0 25px magenta); }
+        .key::after { content: attr(data-note); position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; color: rgba(0,0,0,0.6); font-weight: bold; text-shadow: 0 0 4px white; transition: transform 0.07s; }
+        .key.black::after { color: #ccc; bottom: 5px; }
+        .key.active::after { transform: translateX(-50%) translateY(3px); }
+        .controls { display: flex; gap: 10px; justify-content: center; margin: 30px 0 20px; flex-wrap: wrap; }
+        .btn { background: #0b1020; border: 2px solid var(--primary); color: var(--primary); font-family: 'Orbitron', sans-serif; font-size: 1rem; padding: 10px 20px; border-radius: 40px; cursor: pointer; transition: 0.2s; letter-spacing: 2px; box-shadow: 0 0 15px var(--primary); }
+        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 40px var(--primary); }
+        .status-panel { display: flex; justify-content: space-between; color: #00cccc; border-top: 1px solid #00ffff; padding-top: 15px; margin-top: 20px; font-size: 0.9rem; text-transform: uppercase; }
+        .led { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #0f0; box-shadow: 0 0 10px #0f0; margin-left: 8px; }
+        .midi-led { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #ffaa00; box-shadow: 0 0 10px orange; margin-left: 5px; transition: 0.1s; }
+        .footer-note { font-size: 0.7rem; color: #3f6b7f; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="vst-frame">
+    <div class="brand">SENSITIVE</div>
+    <div class="sub-brand">ARMONÍA COMPLETA · 9ª 11ª 13ª</div>
+
+    <div class="display-panel">
+        <div id="chord-name" class="chord-name">—</div>
+        <div id="chord-notes" class="chord-detail">Esperando notas...</div>
+    </div>
+
+    <div class="controls">
+        <button id="start-btn" class="btn">🔊 INICIAR AUDIO</button>
+        <button id="panic-btn" class="btn">⏹️ PANIC</button>
+        <button id="reconnect-midi" class="btn">🔄 RECONECTAR MIDI</button>
+    </div>
+
+    <div class="piano-container">
+        <div class="piano-visual" id="piano"></div>
+    </div>
+
+    <div class="status-panel">
+        <span id="midi-status">⏻ MIDI: DESCONECTADO <span id="midi-led" class="midi-led"></span></span>
+        <span>ARMONÍA EXTENDIDA <span class="led"></span></span>
+        <span>OCTAVAS: C3 - B5</span>
+    </div>
+    <div class="footer-note">· TECLADO FÍSICO MIDI · ARRASTRA EL RATÓN PARA GLISSANDO ·</div>
+</div>
+
+<script>
+    (function() {
+        // --------------------------------------------------------------
+        // CONFIGURACIÓN
+        // --------------------------------------------------------------
+        let activeNotes = new Set();
+        const sampler = new Tone.PolySynth(Tone.Synth).toDestination();
+        sampler.set({
+            envelope: { attack: 0.002, decay: 0.1, sustain: 0.3, release: 1.2 },
+            oscillator: { type: 'triangle' }
+        });
+
+        const noteNames = ['Do', 'Do♯', 'Re', 'Re♯', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'La♯', 'Si'];
+        const noteNamesSimple = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // Glissando ratón
+        let isMouseDown = false;
+        let lastMouseNote = null;
+
+        // MIDI
+        let midiAccess = null;
+
+        // Elementos UI
+        const midiStatusEl = document.getElementById('midi-status');
+        const midiLedEl = document.getElementById('midi-led');
+        const chordNameEl = document.getElementById('chord-name');
+        const chordDetailEl = document.getElementById('chord-notes');
+
+        // --------------------------------------------------------------
+        // GENERAR TECLADO (C3 a B5)
+        // --------------------------------------------------------------
+        const pianoEl = document.getElementById('piano');
+        const startMidi = 48;
+        const endMidi = 83;
+
+        for (let midi = startMidi; midi <= endMidi; midi++) {
+            const noteIndex = midi % 12;
+            const isBlack = noteNamesSimple[noteIndex].includes('#');
+            const key = document.createElement('div');
+            key.className = isBlack ? 'key black' : 'key white';
+            key.id = `note-${midi}`;
+            const octave = Math.floor(midi / 12) - 1;
+            key.setAttribute('data-note', `${noteNamesSimple[noteIndex]}${octave}`);
+
+            key.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isMouseDown = true;
+                if (lastMouseNote !== null && lastMouseNote !== midi) {
+                    handleNoteOff(lastMouseNote);
+                }
+                handleNoteOn(midi, 100);
+                lastMouseNote = midi;
+            });
+
+            key.addEventListener('mouseenter', (e) => {
+                if (isMouseDown) {
+                    if (lastMouseNote !== null && lastMouseNote !== midi) {
+                        handleNoteOff(lastMouseNote);
+                    }
+                    if (lastMouseNote !== midi) {
+                        handleNoteOn(midi, 100);
+                        lastMouseNote = midi;
+                    }
+                }
+            });
+
+            pianoEl.appendChild(key);
+        }
+
+        window.addEventListener('mouseup', () => {
+            if (isMouseDown) {
+                isMouseDown = false;
+                if (lastMouseNote !== null) {
+                    handleNoteOff(lastMouseNote);
+                    lastMouseNote = null;
+                }
+            }
+        });
+
+        pianoEl.addEventListener('mouseleave', () => {
+            if (isMouseDown && lastMouseNote !== null) {
+                handleNoteOff(lastMouseNote);
+                lastMouseNote = null;
+            }
+        });
+
+        // --------------------------------------------------------------
+        // FUNCIONES NOTE ON/OFF
+        // --------------------------------------------------------------
+        function handleNoteOn(midi, velocity = 80) {
+            if (activeNotes.has(midi)) return;
+            activeNotes.add(midi);
+            const key = document.getElementById(`note-${midi}`);
+            if (key) key.classList.add('active');
+            const noteName = midiToNote(midi);
+            sampler.triggerAttack(noteName, undefined, velocity / 127);
+            updateChordDisplay();
+        }
+
+        function handleNoteOff(midi) {
+            if (!activeNotes.has(midi)) return;
+            activeNotes.delete(midi);
+            const key = document.getElementById(`note-${midi}`);
+            if (key) key.classList.remove('active');
+            const noteName = midiToNote(midi);
+            sampler.triggerRelease(noteName);
+            updateChordDisplay();
+        }
+
+        function midiToNote(midi) {
+            const octave = Math.floor(midi / 12) - 1;
+            return noteNamesSimple[midi % 12] + octave;
+        }
+
+        // --------------------------------------------------------------
+        // DETECTOR DE ACORDES AVANZADO (hasta 13ª)
+        // Basado en intervalos de clases de nota
+        // --------------------------------------------------------------
+        function getChordNameFromSet(midiSet) {
+            if (midiSet.size === 0) return { name: '—', detail: '' };
+            const sorted = Array.from(midiSet).sort((a, b) => a - b);
+            const pitchClasses = sorted.map(n => n % 12);
+            const uniquePC = [...new Set(pitchClasses)].sort((a, b) => a - b);
+            if (uniquePC.length > 7) {
+                return { name: 'COMPLEJO', detail: sorted.map(n => noteNames[n % 12] + (Math.floor(n/12)-1)).join(' ') };
+            }
+            const bassMidi = sorted[0];
+            const bassPC = bassMidi % 12;
+            const bassName = noteNames[bassPC];
+
+            // Probar cada posible fundamental
+            let bestChord = null;
+            let bestScore = -1;
+
+            for (let i = 0; i < uniquePC.length; i++) {
+                const root = uniquePC[i];
+                // Intervalos relativos a la fundamental (0 = root)
+                const intervals = uniquePC.map(pc => (pc - root + 12) % 12).sort((a,b) => a - b);
+                const chord = identifyChordByIntervals(intervals);
+                if (chord) {
+                    let score = 0;
+                    // Preferir que el bajo coincida con la fundamental
+                    if (bassPC === root) score += 3;
+                    else if (bassPC === root + (chord.bassOffset || 0)) score += 2;
+                    // Preferir acordes con menos alteraciones (priorizar los más estándar)
+                    // Aquí podríamos añadir más lógica, pero nos quedamos con esta
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestChord = {
+                            root: root,
+                            name: chord.name,
+                            bassOffset: chord.bassOffset || 0,
+                            intervals: intervals
+                        };
+                    }
+                }
+            }
+
+            if (!bestChord) {
+                // Si no se reconoce, mostrar las notas
+                const noteStr = sorted.map(n => noteNames[n % 12] + (Math.floor(n/12)-1)).join(' ');
+                return { name: '—', detail: noteStr };
+            }
+
+            const rootName = noteNames[bestChord.root];
+            let chordName = rootName + bestChord.name;
+
+            // Inversión: si el bajo no es la fundamental
+            if (bassPC !== bestChord.root) {
+                // El bajo es alguna otra nota del acorde
+                chordName += ` / ${noteNames[bassPC]}`;
+            }
+
+            // Detalle: lista de notas
+            const noteDetails = sorted.map(n => noteNames[n % 12] + (Math.floor(n/12)-1)).join(' · ');
+            return { name: chordName, detail: noteDetails };
+        }
+
+        // Tabla de reconocimiento de acordes por intervalos (conjunto de clases de nota relativas a la fundamental)
+        // Los intervalos están en semitonos: 0=fundamental, 1=b9, 2=9, 3=3m/10, 4=3M, 5=11, 6=11#/5b, 7=5, 8=5#/13b, 9=13, 10=7, 11=7M
+        // Para simplificar, usaremos patrones.
+        function identifyChordByIntervals(intervals) {
+            // Asegurar que la fundamental (0) está presente
+            if (!intervals.includes(0)) return null;
+            // Extraer los intervalos sin la fundamental
+            const others = intervals.filter(i => i !== 0).sort((a,b) => a - b);
+            const key = others.join(',');
+
+            // Diccionario de acordes (los más comunes)
+            const chordDB = {
+                // Triadas
+                '4,7': { name: '' },               // Mayor
+                '3,7': { name: 'm' },               // Menor
+                '4,8': { name: 'aug' },             // Aumentado
+                '3,6': { name: 'dim' },             // Disminuido
+                '2,7': { name: 'sus2' },            // Sus2
+                '5,7': { name: 'sus4' },            // Sus4
+                '7': { name: '(5)' },                // Quinta
+
+                // Cuatriadas (con séptima)
+                '4,7,11': { name: 'maj7' },          // Mayor con séptima mayor
+                '3,7,10': { name: 'm7' },            // Menor séptima
+                '4,7,10': { name: '7' },             // Dominante séptima
+                '3,6,10': { name: 'm7b5' },          // Semidisminuido
+                '3,6,9': { name: 'dim7' },           // Disminuido séptima
+                '4,7,9': { name: '6' },               // Mayor con sexta
+                '3,7,9': { name: 'm6' },              // Menor con sexta
+                '2,4,7': { name: 'add9' },            // Añadida novena (sin séptima)
+                '4,8,10': { name: '7#5' },            // Dominante con quinta aumentada
+                '4,6,10': { name: '7b5' },            // Dominante con quinta disminuida
+
+                // Acordes de novena (5 notas)
+                '2,4,7,10': { name: '9' },            // Novena dominante
+                '2,3,7,10': { name: 'm9' },           // Novena menor
+                '2,4,7,11': { name: 'maj9' },         // Novena mayor
+                '1,4,7,10': { name: '7b9' },          // Séptima con novena bemol
+                '3,4,7,10': { name: '7#9' },          // Séptima con novena aumentada (generalmente se escribe 7#9)
+                '2,4,6,10': { name: '7b5/9' },        // Séptima con quinta bemol y novena (9b5)
+                '2,4,8,10': { name: '7#5/9' },        // Séptima con quinta aumentada y novena
+
+                // Acordes de oncena (6 notas)
+                '2,4,7,10,5': { name: '11' },         // Oncena (asumiendo que 5 es la 11, cuidado: 5 es 11, pero también puede ser 11 justa)
+                '2,3,7,10,5': { name: 'm11' },        // Menor oncena
+                '2,4,7,11,5': { name: 'maj11' },      // Mayor oncena
+                '2,4,7,10,6': { name: '7#11' },       // Dominante con oncena aumentada (lydian dominante)
+                '2,4,7,10,4': { name: '11' },         // A veces la oncena se duplica, pero no
+                // Nota: la oncena justa (5) suele omitirse en acordes dominantes si no se especifica
+
+                // Acordes de trecena (7 notas)
+                '2,4,7,10,9': { name: '13' },         // Trecena dominante (con 9 y 13, omitiendo 11)
+                '2,4,7,11,9': { name: 'maj13' },      // Mayor trecena
+                '2,3,7,10,9': { name: 'm13' },        // Menor trecena
+                '2,4,7,10,5,9': { name: '13' },       // Trecena con 11 (usualmente se omite 11)
+                '2,4,7,10,8': { name: '7b13' },       // Dominante con trecena bemol
+                '2,4,7,10,6,9': { name: '13#11' },    // Trecena con oncena aumentada (lydian dominante)
+            };
+
+            if (chordDB.hasOwnProperty(key)) {
+                return chordDB[key];
+            }
+
+            // Intentar con patrones más flexibles (ej: omitiendo la 5ª)
+            // Si hay 4 notas y una de ellas es 7, podemos intentar reconocer como 7 sin 5ª
+            if (others.length === 3 && others.includes(7) && others.includes(4) && others.includes(10)) {
+                if (!others.includes(0) && others.length === 3) return { name: '7' }; // triada con séptima pero sin 5? poco común
+            }
+
+            return null;
+        }
+
+        function updateChordDisplay() {
+            const chordInfo = getChordNameFromSet(activeNotes);
+            chordNameEl.textContent = chordInfo.name;
+            chordDetailEl.textContent = chordInfo.detail || '—';
+        }
+
+        // --------------------------------------------------------------
+        // MANEJO MIDI
+        // --------------------------------------------------------------
+        function flashMIDILed() {
+            midiLedEl.style.background = '#0f0';
+            midiLedEl.style.boxShadow = '0 0 15px #0f0';
+            setTimeout(() => {
+                if (midiAccess && midiAccess.inputs.size > 0) {
+                    midiLedEl.style.background = '#0f0';
+                    midiLedEl.style.boxShadow = '0 0 10px #0f0';
+                } else {
+                    midiLedEl.style.background = '#ffaa00';
+                    midiLedEl.style.boxShadow = '0 0 10px orange';
+                }
+            }, 200);
+        }
+
+        function onMIDIMessage(message) {
+            flashMIDILed();
+            const [command, note, velocity] = message.data;
+            // Note On: command 144-159 y velocity > 0
+            if (command >= 144 && command <= 159 && velocity > 0) {
+                handleNoteOn(note, velocity);
+            }
+            // Note Off: command 128-143 o note on con velocity 0
+            else if ((command >= 128 && command <= 143) || (command >= 144 && command <= 159 && velocity === 0)) {
+                handleNoteOff(note);
+            }
+        }
+
+        async function conectarMIDI() {
+            if (!navigator.requestMIDIAccess) {
+                midiStatusEl.innerHTML = '⏻ MIDI: NO SOPORTADO';
+                return;
+            }
+            midiStatusEl.innerHTML = '⏻ MIDI: SOLICITANDO...';
+            try {
+                midiAccess = await navigator.requestMIDIAccess();
+                const inputs = midiAccess.inputs;
+                if (inputs.size === 0) {
+                    midiStatusEl.innerHTML = '⏻ MIDI: NO HAY DISPOSITIVOS';
+                    midiLedEl.style.background = '#f00';
+                } else {
+                    inputs.forEach(input => {
+                        input.onmidimessage = onMIDIMessage;
+                    });
+                    midiStatusEl.innerHTML = `⏻ MIDI: CONECTADO (${inputs.size})`;
+                    midiLedEl.style.background = '#0f0';
+                }
+                midiAccess.onstatechange = (e) => {
+                    if (e.port.type === 'input' && e.port.state === 'connected') {
+                        e.port.onmidimessage = onMIDIMessage;
+                        midiStatusEl.innerHTML = '⏻ MIDI: CONECTADO';
+                        midiLedEl.style.background = '#0f0';
+                    }
+                };
+            } catch (err) {
+                console.error('Error MIDI:', err);
+                midiStatusEl.innerHTML = '⏻ MIDI: ERROR';
+                midiLedEl.style.background = '#f00';
+            }
+        }
+
+        // --------------------------------------------------------------
+        // BOTONES
+        // --------------------------------------------------------------
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            await Tone.start();
+            document.getElementById('start-btn').textContent = '🔊 AUDIO ACTIVO';
+            document.getElementById('start-btn').style.background = '#00ffff';
+            document.getElementById('start-btn').style.color = '#000';
+            conectarMIDI();
+        });
+
+        document.getElementById('panic-btn').addEventListener('click', () => {
+            sampler.releaseAll();
+            activeNotes.clear();
+            document.querySelectorAll('.key').forEach(k => k.classList.remove('active'));
+            updateChordDisplay();
+            isMouseDown = false;
+            lastMouseNote = null;
+        });
+
+        document.getElementById('reconnect-midi').addEventListener('click', () => {
+            conectarMIDI();
+        });
+
+        // Inicializar display
+        updateChordDisplay();
+    })();
+</script>
+</body>
+</html>
